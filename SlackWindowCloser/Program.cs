@@ -12,9 +12,9 @@ namespace SlackWindowCloser
         private static readonly ManualResetEvent _exitEvent = new ManualResetEvent(initialState: false);
         private static readonly Timer _timer = new Timer(interval: 1_000);
         private static readonly Stopwatch _stopwatch = new Stopwatch();
-        private const int MAX_APPLICATION_RUNNING_TIME = 100_000;
+        private static readonly int _maxApplicationRunningTime = 100_000;
 
-        private static void Main(string[] args)
+        private static void Main(string[] commandLineArguments)
         {
             _timer.Elapsed += Timer_Elapsed;
             _timer.Start();
@@ -26,35 +26,29 @@ namespace SlackWindowCloser
         {
             ExitApplicaitonIfRunningTimeExceedsMaximum();
 
-            var slackProcesses = Process.GetProcessesByName("Slack");
-            if (!slackProcesses.Any()) return;
+            const string processName = "Slack";
+            const string partialMainWindowTitle = processName;
+            var mainWindowRendererProcess = Process
+                    .GetProcessesByName(processName)
+                    .SingleOrDefault(
+                        process => process.MainWindowTitle.Contains(partialMainWindowTitle)
+                    );
+            if (mainWindowRendererProcess == null) return;
 
-            Debug.WriteLine("Slack processes are detected.");
+            Debug.WriteLine("Slack Main Window renderer process is detected.");
 
             _timer.Stop();
-            CloseSlackMainWindow(slackProcesses);
+            mainWindowRendererProcess.CloseMainWindow();
             _exitEvent.Set();
         }
 
         private static void ExitApplicaitonIfRunningTimeExceedsMaximum()
         {
-            Debug.WriteLine($"SlackWindowCloser is running for {_stopwatch.Elapsed.Seconds} seconds without detecting Slack processes.");
-            if (_stopwatch.ElapsedMilliseconds >= MAX_APPLICATION_RUNNING_TIME)
+            Debug.WriteLine($"SlackWindowCloser is running for {_stopwatch.Elapsed.TotalSeconds} seconds " +
+                            $"without detecting Slack Main Window renderer process.");
+            if (_stopwatch.ElapsedMilliseconds >= _maxApplicationRunningTime)
             {
                 _exitEvent.Set();
-            }
-        }
-
-        private static void CloseSlackMainWindow(IEnumerable<Process> slackProcesses)
-        {
-            // Wait for 10 seconds so that Slack window shows up.
-            // System.Diagnostics.Process does not have events to notify that Main Window is shown up,
-            // so waiting is an alternative.
-            Thread.Sleep(millisecondsTimeout: 10_000);
-
-            foreach (var process in slackProcesses)
-            {
-                process.CloseMainWindow();
             }
         }
     }
