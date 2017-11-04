@@ -29,7 +29,7 @@ namespace SlackWindowCloser
         }
 
         /// <summary>
-        /// Append specified text to a text file which is already configured when instantiating this <see cref="Logger"/>.
+        /// Append specified text to a text file which is already configured when instantiating <see cref="Logger"/>.
         /// </summary>
         public void Append(string text)
         {

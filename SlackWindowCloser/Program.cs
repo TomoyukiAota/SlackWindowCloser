@@ -9,10 +9,10 @@ namespace SlackWindowCloser
     internal static class Program
     {
         private const string ApplicationName = "SlackWindowCloser";
+        private static readonly Configuration Configuration = new Configuration();
         private static readonly ManualResetEvent ExitEvent = new ManualResetEvent(initialState: false);
-        private static readonly Timer Timer = new Timer(interval: 1_000);
+        private static readonly Timer Timer = new Timer(interval: Configuration.TimerInterval);
         private static readonly Stopwatch Stopwatch = new Stopwatch();
-        private static int _maxRunningDuration = 100_000;
         private static Logger _logger;
 
         private static void Main(string[] args)
@@ -30,12 +30,12 @@ namespace SlackWindowCloser
 
         private static void ConfigureByCommandLineOptions(CommandLineOptions options)
         {
-            _maxRunningDuration = options.MaxRunningDuration * 1000;    //Multiply by 1000 to convert seconds to milliseconds.
+            Configuration.ConfigureByCommandLineOptions(options);
 
-            if (options.LogFolderPath == null) 
+            if (!Configuration.IsLogFolderPathSpecified) 
                 return;
 
-            _logger = new Logger(options.LogFolderPath);
+            _logger = new Logger(Configuration.LogFolderPath);
         }
 
         private static void Timer_Elapsed(object sender, ElapsedEventArgs e)
@@ -56,10 +56,11 @@ namespace SlackWindowCloser
 
         private static void ExitApplicaitonIfRunningTimeExceedsMaximum()
         {
-            if (Stopwatch.ElapsedMilliseconds < _maxRunningDuration) 
+            if (Stopwatch.ElapsedMilliseconds < Configuration.MaxRunningDuration) 
                 return;
             
-            OutputMessage($"Maximum application running time ({_maxRunningDuration/1000} seconds) has been exceeded. " +
+            OutputMessage($"Maximum application running time ({Configuration.MaxRunningDuration/1000} seconds)" +
+                          $" has been exceeded. " +
                           $"{ApplicationName} will exit.");
             ExitEvent.Set();
         }
