@@ -1,5 +1,5 @@
 # SlackWindowCloser
-Automatically closes [Slack](https://slack.com/) window on Windows startup. This application is for [the issue that Slack window is left open after Windows startup](https://redd.it/4b9r2u).
+This application automatically closes [Slack](https://slack.com/) window on Windows startup. This application is for [the issue that Slack window is left open after Windows startup](https://redd.it/4b9r2u).
 
 This application launches at Windows startup and searches for the process which renders Slack Main Window. When the process is detected, this application closes the window and exits.
 
