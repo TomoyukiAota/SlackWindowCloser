@@ -1,9 +1,9 @@
 # SlackWindowCloser
-Automatically closes Slack window on Windows startup. This application is for [the issue that Slack window is left open after Windows startup](https://redd.it/4b9r2u).
+Automatically closes [Slack](https://slack.com/) window on Windows startup. This application is for [the issue that Slack window is left open after Windows startup](https://redd.it/4b9r2u).
 
 This application launches at Windows startup and searches for the process which renders Slack Main Window. When the process is detected, this application closes the window and exits.
 
-Also, if this application runs for more than 100 seconds without detecting the process, this application exits. This is an safety feature not to run this application forever. The duration which this application runs can be configured, so longer duration may be preferable for slow PCs. (See Options section.)
+Also, if this application runs for more than 100 seconds without detecting the process, this application exits. This is a safety feature not to run this application forever. The duration which this application runs can be configured, so longer duration may be preferable for slow PCs. (See Options section.)
 
 I observed this issue right after installation of Slack (2.8.2 64-bit Direct Download) in Windows 10, but currently I do not anymore. I neither upgraded the version nor changed some configurations, but it disappeared now. This application is left here just in case it appears again.
 
