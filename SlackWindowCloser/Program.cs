@@ -1,6 +1,4 @@
-﻿using System;
-using System.Diagnostics;
-using System.IO;
+﻿using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Timers;
@@ -10,12 +8,12 @@ namespace SlackWindowCloser
 {
     internal static class Program
     {
-        private static readonly ManualResetEvent _exitEvent = new ManualResetEvent(initialState: false);
-        private static readonly Timer _timer = new Timer(interval: 1_000);
-        private static readonly Stopwatch _stopwatch = new Stopwatch();
+        private const string ApplicationName = "SlackWindowCloser";
+        private static readonly ManualResetEvent ExitEvent = new ManualResetEvent(initialState: false);
+        private static readonly Timer Timer = new Timer(interval: 1_000);
+        private static readonly Stopwatch Stopwatch = new Stopwatch();
         private static int _maxRunningDuration = 100_000;
-        private static string _logFolderPath = null;
-        private static string _logFilePath = null;
+        private static Logger _logger;
 
         private static void Main(string[] args)
         {
@@ -24,62 +22,63 @@ namespace SlackWindowCloser
                 return;
 
             ConfigureByCommandLineOptions(options);
-            CreateLogFileIfFolderPathIsSpecified();
-            _timer.Elapsed += Timer_Elapsed;
-            _timer.Start();
-            _stopwatch.Start();
-            _exitEvent.WaitOne();
+            Timer.Elapsed += Timer_Elapsed;
+            Timer.Start();
+            Stopwatch.Start();
+            ExitEvent.WaitOne();
         }
 
         private static void ConfigureByCommandLineOptions(CommandLineOptions options)
         {
-            _maxRunningDuration = options.MaxRunningDuration * 1000;
+            _maxRunningDuration = options.MaxRunningDuration * 1000;    //Multiply by 1000 to convert seconds to milliseconds.
 
-            if (options.LogFolderPath == null) return;
+            if (options.LogFolderPath == null) 
+                return;
 
-            _logFolderPath = options.LogFolderPath;
-            var now = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff");
-            _logFilePath = $@"{_logFolderPath}/{now}_SlackWindowCloser.txt";
-        }
-
-        private static void CreateLogFileIfFolderPathIsSpecified()
-        {
-            if (_logFolderPath == null) return;
-
-            Directory.CreateDirectory(_logFolderPath);
-            var now = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff");
-            File.AppendAllText(_logFilePath, $"{now}: Log file is created.");
+            _logger = new Logger(options.LogFolderPath);
         }
 
         private static void Timer_Elapsed(object sender, ElapsedEventArgs e)
         {
-            Debug.WriteLine($"SlackWindowCloser is running for {_stopwatch.Elapsed.TotalSeconds} seconds " +
-                            $"without detecting Slack Main Window renderer process.");
-
+            OutputMessage($"{ApplicationName} is running for {Stopwatch.Elapsed.TotalSeconds} seconds " +
+                          $"without detecting Slack Main Window renderer process.");
             ExitApplicaitonIfRunningTimeExceedsMaximum();
+            var process = GetSlackMainWindowRendererProcess();
+            if (process == null) 
+                return;
 
-            const string processName = "Slack";
-            const string partialMainWindowTitle = processName;
-            var mainWindowRendererProcess = Process
-                    .GetProcessesByName(processName)
-                    .SingleOrDefault(
-                        process => process.MainWindowTitle.Contains(partialMainWindowTitle)
-                    );
-            if (mainWindowRendererProcess == null) return;
-
-            Debug.WriteLine("Slack Main Window renderer process is detected.");
-
-            _timer.Stop();
-            mainWindowRendererProcess.CloseMainWindow();
-            _exitEvent.Set();
+            OutputMessage("Slack Main Window renderer process is detected.");
+            Timer.Stop();
+            process.CloseMainWindow();
+            OutputMessage($"Slack Main Window is closed. {ApplicationName} will exit.");
+            ExitEvent.Set();
         }
 
         private static void ExitApplicaitonIfRunningTimeExceedsMaximum()
         {
-            if (_stopwatch.ElapsedMilliseconds >= _maxRunningDuration)
-            {
-                _exitEvent.Set();
-            }
+            if (Stopwatch.ElapsedMilliseconds < _maxRunningDuration) 
+                return;
+            
+            OutputMessage($"Maximum application running time ({_maxRunningDuration/1000} seconds) has been exceeded. " +
+                          $"{ApplicationName} will exit.");
+            ExitEvent.Set();
+        }
+
+        private static Process GetSlackMainWindowRendererProcess()
+        {
+            const string processName = "Slack";
+            const string partialMainWindowTitle = processName;
+            return Process
+                .GetProcessesByName(processName)
+                .SingleOrDefault(
+                    process => process.MainWindowTitle.Contains(partialMainWindowTitle)
+                );
+        }
+
+        private static void OutputMessage(string message)
+        {
+            _logger?.Append(message);
+            Debug.WriteLine(message);
         }
     }
 }
